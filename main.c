@@ -158,7 +158,7 @@ void handle_request(FCGX_Request* request, char* root, char* http_uri)
 	bool square = false; // FIXME
 
 	// Unless a square image is requested, calculcate proper aspect ratio
-	if(!square)
+	if(!square && size != 1)
 	{
 		if(width >= height)
 			new_height = height * size / width;
