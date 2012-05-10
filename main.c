@@ -219,6 +219,10 @@ int main(int argc, char* argv[], char* envp[])
 		openlog("fastresize", LOG_CONS, LOG_USER);
 	#endif
 
+	// Change the working directory
+	if((chdir(root)) < 0)
+		error("Couldn't change working directory\n", EXIT_FAILURE);
+
 	// Initialize FastCGI
 	syslog(LOG_INFO, "Initializing FastCGI\n");
 	if(FCGX_Init())
@@ -244,15 +248,28 @@ int main(int argc, char* argv[], char* envp[])
 	syslog(LOG_INFO, "Initializing ImageMagick\n");
 	MagickWandGenesis();
 
-	// Fork worker processes
+	// Fork worker processes and exit main process (to daemonize)
 	bool worker = false;
 	syslog(LOG_INFO, "Forking workers\n");
-	for(int i = 1; i < num_workers; i++)
+	for(int i = 1; i <= num_workers; i++)
 		if((worker = fork() == 0)) break;
 	
 	if(!worker)
+	{
 		syslog(LOG_INFO, "Now listening for requests on 127.0.0.1:9000\n");
-	
+		printf("Successfull startup, see syslog for details\n");
+
+		// Change the filemode mask
+		umask(0);
+
+		// Close stdin, -out, -err
+		close(STDIN_FILENO);
+		close(STDOUT_FILENO);
+		close(STDERR_FILENO);
+
+		exit(EXIT_SUCCESS);
+	}
+
 	while(FCGX_Accept_r(&request) == 0)
 		handle_request(&request, root, http_uri);
 
