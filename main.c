@@ -35,7 +35,7 @@
 #define error_errno(desc, ret) do { syslog(LOG_ERR, "Error: %s (%s)\n",  desc, strerror(errno)); exit(ret); } while(0);
 #define http_error(num) { FCGX_FPrintF(request->out, "\r\n\r\nError %d\n", num); }
 #define http_error_c(num) { http_error(num); return; }
-#define http_sendfile(file, mime) { FCGX_FPrintF(request->out, "Content-type: %s\r\nX-Accel-Redirect: /asset-send/%s\r\n\r\n", mime, file); }
+#define http_sendfile(file, mime) { FCGX_FPrintF(request->out, "Content-type: %s\r\nX-Accel-Redirect: /asset-send/%s\r\nX-Generator: fastresize\r\n\r\n", mime, file); }
 
 void handle_request(FCGX_Request* request, char* root, char* http_uri)
 {
