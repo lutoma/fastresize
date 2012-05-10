@@ -209,7 +209,15 @@ int main(int argc, char* argv[], char* envp[])
 
 	// TODO Some more error checking
 
+	// Initialize syslog
 	syslog(LOG_INFO, "Starting up\n");
+	#if defined(DEBUG)
+		setlogmask(LOG_UPTO(LOG_DEBUG));
+		openlog("fastresize", LOG_CONS | LOG_NDELAY | LOG_PERROR | LOG_PID, LOG_USER);
+	#else
+		setlogmask(LOG_UPTO(LOG_INFO));
+		openlog("fastresize", LOG_CONS, LOG_USER);
+	#endif
 
 	// Initialize FastCGI
 	syslog(LOG_INFO, "Initializing FastCGI\n");
