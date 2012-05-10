@@ -7,8 +7,8 @@ STRIP=strip
 MAKE_CFLAGS=-O3 -std=gnu99 -Wall -I/usr/include/ImageMagick $(CFLAGS)
 MAKE_LDFLAGS=-lfcgi -lMagickWand $(LDFLAGS)
 
-fastresize: main.c
-	$(CC) $(MAKE_CFLAGS) $(MAKE_LDFLAGS) -o fastresize main.c
+fastresize: main.c resize.c request.c resize.h global.h request.h
+	$(CC) $(MAKE_CFLAGS) $(MAKE_LDFLAGS) -o fastresize main.c request.c resize.c
 
 clean:
 	$(RM) -f fastresize
