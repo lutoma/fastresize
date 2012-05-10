@@ -35,7 +35,7 @@
 #define error_errno(desc, ret) do { syslog(LOG_ERR, "Error: %s (%s)\n",  desc, strerror(errno)); exit(ret); } while(0);
 #define http_error(num) { FCGX_FPrintF(request->out, "\r\n\r\nError %d\n", num); }
 #define http_error_c(num) { http_error(num); return; }
-#define http_sendfile(file, mime) { FCGX_FPrintF(request->out, "Content-type: %s\r\nX-Sendfile: %s\r\n\r\n", mime, file); }
+#define http_sendfile(file, mime) { FCGX_FPrintF(request->out, "Content-type: %s\r\nX-Accel-Redirect: /asset-send/%s\r\n\r\n", mime, file); }
 
 void handle_request(FCGX_Request* request, char* root, char* http_uri)
 {
@@ -72,7 +72,7 @@ void handle_request(FCGX_Request* request, char* root, char* http_uri)
 	{
 		if(check_stat.st_mode & S_IFREG)
 		{
-			http_sendfile(req_path, "image/png");
+			http_sendfile(req_file, "image/png");
 			syslog(LOG_INFO, "[200] %s - Already exists in file system\n", req_file);
 			return;
 		} else {
@@ -176,7 +176,7 @@ void handle_request(FCGX_Request* request, char* root, char* http_uri)
 	if (status == MagickFalse)
 		error("Could not write image", EXIT_FAILURE)
 
-	http_sendfile(req_path, "image/png");
+	http_sendfile(req_file, "image/png");
 	syslog(LOG_INFO, "[200] %s - Generated from %s.\n", req_file, source);
 
 	free(source);
