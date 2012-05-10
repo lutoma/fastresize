@@ -45,7 +45,7 @@ void handle_request(FCGX_Request* request, char* root, char* http_uri)
 	char* req_file = FCGX_GetParam("REQUEST_URI", request->envp);
 	
 	if(!req_file)
-		return
+		return;
 
 	// Check if the request URI is too short
 	if(strlen(req_file) < uri_splice + 1)
