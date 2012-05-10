@@ -29,9 +29,10 @@
 #include <sys/stat.h>
 #include <wand/MagickWand.h>
 #include <fcgiapp.h>
+#include <syslog.h>
 
-#define error(desc, ret) do { printf("Error: %s\n",  desc); exit(ret); } while(0);
-#define error_errno(desc, ret) do { printf("Error: %s (%s)\n",  desc, strerror(errno)); exit(ret); } while(0);
+#define error(desc, ret) do { syslog(LOG_ERR, "Error: %s\n",  desc); exit(ret); } while(0);
+#define error_errno(desc, ret) do { syslog(LOG_ERR, "Error: %s (%s)\n",  desc, strerror(errno)); exit(ret); } while(0);
 #define http_error(num) { FCGX_FPrintF(request->out, "\r\n\r\nError %d\n", num); }
 #define http_error_c(num) { http_error(num); return; }
 #define http_sendfile(file, mime) { FCGX_FPrintF(request->out, "Content-type: %s\r\nX-Sendfile: %s\r\n\r\n", mime, file); }
@@ -69,7 +70,7 @@ void handle_request(FCGX_Request* request, char* root, char* http_uri)
 		if(check_stat.st_mode & S_IFREG)
 		{
 			http_sendfile(req_path, "image/png");
-			printf("[200] %s - Already exists in file system\n", req_file);
+			syslog(LOG_INFO, "[200] %s - Already exists in file system\n", req_file);
 			return;
 		} else {
 			// Directory, pipe, symlink or similar.
@@ -98,7 +99,7 @@ void handle_request(FCGX_Request* request, char* root, char* http_uri)
 	char* size_str = calloc(dot - underscore, sizeof(char));
 	if(size_str == NULL)
 	{
-		fprintf(stderr, "Could not allocate.\n");
+		syslog(LOG_ERR, "Could not allocate.\n");
 		http_error_c(500);
 	}
 
@@ -113,7 +114,7 @@ void handle_request(FCGX_Request* request, char* root, char* http_uri)
 	char* source = calloc(strlen(req_file), sizeof(char));
 	if(source == NULL)
 	{
-		fprintf(stderr, "Could not allocate.\n");
+		syslog(LOG_ERR, "Could not allocate.\n");
 		http_error_c(500);
 	}
 
@@ -155,12 +156,12 @@ void handle_request(FCGX_Request* request, char* root, char* http_uri)
 
 	// Unless a square image is requested, calculcate proper aspect ratio
 	if(!square)
+	{
 		if(width >= height)
 			new_height = height * size / width;
 		else
 			new_width = width * size / height;
-
-	printf("New height: %d\nNew width: %d\n", height, width);
+	}
 
 	// Turn the image into a thumbnail sequence (for animated GIFs)
 	MagickResetIterator(magick_wand);
@@ -173,7 +174,7 @@ void handle_request(FCGX_Request* request, char* root, char* http_uri)
 		error("Could not write image", EXIT_FAILURE)
 
 	http_sendfile(req_path, "image/png");
-	printf("[200] %s - Generated from %s.\n", req_file, source);
+	syslog(LOG_INFO, "[200] %s - Generated from %s.\n", req_file, source);
 
 	free(source);
 	free(path);
@@ -184,6 +185,7 @@ void handle_request(FCGX_Request* request, char* root, char* http_uri)
 void usage(char* argv[])
 {
 	fprintf(stderr, "Usage: %s [root] [http_uri] [listen_addr] [group] [user] [num_workers]\n", argv[0]);
+	syslog(LOG_ERR, "Invalid command line arguments\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -207,8 +209,10 @@ int main(int argc, char* argv[], char* envp[])
 
 	// TODO Some more error checking
 
+	syslog(LOG_INFO, "Starting up\n");
+
 	// Initialize FastCGI
-	printf("Initializing FastCGI\n");
+	syslog(LOG_INFO, "Initializing FastCGI\n");
 	if(FCGX_Init())
 		error("Could not initialize FastCGI (during FCGX_Init())", EXIT_FAILURE);
 
@@ -229,17 +233,17 @@ int main(int argc, char* argv[], char* envp[])
 		error("Couldn't initialize FastCGI request handler", EXIT_FAILURE);
 
 	// Initialize ImageMagick
-	printf("Initializing ImageMagick\n");
+	syslog(LOG_INFO, "Initializing ImageMagick\n");
 	MagickWandGenesis();
 
 	// Fork worker processes
 	bool worker = false;
-	printf("Forking workers\n");
+	syslog(LOG_INFO, "Forking workers\n");
 	for(int i = 1; i < num_workers; i++)
 		if((worker = fork() == 0)) break;
 	
 	if(!worker)
-		printf("Now listening for requests on 127.0.0.1:9000\n");
+		syslog(LOG_INFO, "Now listening for requests on 127.0.0.1:9000\n");
 	
 	while(FCGX_Accept_r(&request) == 0)
 		handle_request(&request, root, http_uri);
