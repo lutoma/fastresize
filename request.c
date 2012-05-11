@@ -77,6 +77,8 @@ void handle_request(FCGX_Request* request, char* root)
 	if(resize_status == 1)
 	{
 		FCGX_FPrintF(request->out, "Location: ../%s.%s\r\n\r\n", basename, extension);
+		free(path);
+		free(req_path);
 		return;
 	} else if(resize_status < 0)
 	{
