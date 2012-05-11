@@ -17,8 +17,17 @@
 
 #include <fcgiapp.h>
 
-#define http_error(num) { FCGX_FPrintF(request->out, "\r\n\r\nError %d\n", num); }
-#define http_error_c(num) { http_error(num); return; }
-#define http_sendfile(file) { FCGX_FPrintF(request->out, "X-Accel-Redirect: /asset-send/%s\r\nGenerator: fastresize\r\n\r\n", file); }
+static inline void http_error(FCGX_Request* request, int num) {
+	FCGX_FPrintF(request->out,
+		"Status: %d %s\r\n"
+		"Content-Type: text/html\r\n"
+		"\r\n"
+		"<h1>Error %d</h1>"
+		"<hr /><a href='https://github.com/lutoma/fastresize'>fastresize</a>",
+		num, num == 404 ? "Not found" : "Error",	num);
+}
+
+#define http_error_c(num) { http_error(request, num); return; }
+#define http_sendfile(file) { FCGX_FPrintF(request->out, "X-Accel-Redirect: /asset-send/%s\r\n\r\n", file); }
 
 void handle_request(FCGX_Request* request, char* root);
