@@ -36,22 +36,21 @@
 
 void usage(char* argv[])
 {
-	fprintf(stderr, "Usage: %s [root] [http_uri] [listen_addr] [group] [user] [num_workers]\n", argv[0]);
+	fprintf(stderr, "Usage: %s [root] [listen_addr] [group] [user] [num_workers]\n", argv[0]);
 	syslog(LOG_ERR, "Invalid command line arguments\n");
 	exit(EXIT_FAILURE);
 }
 
 int main(int argc, char* argv[], char* envp[])
 {
-	if(argc < 7)
+	if(argc < 6)
 		usage(argv);
 
 	char* root = argv[1];
-	char* http_uri = argv[2];
-	char* listen_addr = argv[3];
-	int groupid = atoi(argv[4]);
-	int userid = atoi(argv[5]);
-	int num_workers = atoi(argv[6]);
+	char* listen_addr = argv[2];
+	int groupid = atoi(argv[3]);
+	int userid = atoi(argv[4]);
+	int num_workers = atoi(argv[5]);
 
 	if(groupid <= 0 || userid <= 0 || num_workers <= 0)
 		usage(argv);
@@ -123,7 +122,7 @@ int main(int argc, char* argv[], char* envp[])
 	}
 
 	while(FCGX_Accept_r(&request) == 0)
-		handle_request(&request, root, http_uri);
+		handle_request(&request, root);
 
 	// Cleanup & exit
 	MagickWandTerminus();

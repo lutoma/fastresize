@@ -28,36 +28,24 @@
 #include "request.h"
 #include "resize.h"
 
-void handle_request(FCGX_Request* request, char* root, char* http_uri)
+void handle_request(FCGX_Request* request, char* root)
 {
-	int uri_splice = strlen(http_uri);
-
-	// Get request URI (+1 to strip off the leading slash)
-	char* req_file = FCGX_GetParam("REQUEST_URI", request->envp);
+	char* basename = FCGX_GetParam("BASENAME", request->envp);
+	char* extension = FCGX_GetParam("EXTENSION", request->envp);
+	char* size_str = FCGX_GetParam("SIZE", request->envp);
 	
-	if(!req_file)
-		return;
+	if(!size_str || !basename || !extension)
+		http_error_c(500);
 
-	// Check if the request URI is too short
-	if(strlen(req_file) < uri_splice + 1)
-		http_error_c(404);
-	
-	req_file += uri_splice;
+	// Build filename
+	char* req_file = calloc(strlen(basename) + strlen(size_str) + strlen(extension) + 3, sizeof(char));
+	sprintf(req_file, "%s_%s.%s", basename, size_str, extension);
 
-	// Look for directory traversal attacks
-	for(int i = 0; i < strlen(req_file); i++)
-	{
-		if(*(req_file + i) != '.')
-			continue;
-		
-		if(*(req_file + i + 1) == '.' && *(req_file + i + 2) == '/')
-			http_error_c(403);
-	}
-
-	// Check if the requested file exists already
+	// Build absolute file path
 	char* req_path = calloc(strlen(root) +  strlen(req_file) + 1, sizeof(char));
 	sprintf(req_path, "%s%s", root, req_file);
 
+	// Check if the requested file exists already
 	struct stat check_stat;
 	if(stat(req_path, &check_stat) == 0)
 	{
@@ -72,71 +60,33 @@ void handle_request(FCGX_Request* request, char* root, char* http_uri)
 		}
 	}
 
-	int dot = -1;
-	int underscore = -1;
-
-	// Backwards scan for size and filename
-	for(int i = strlen(req_file); i >= 0 && underscore == -1; i--)
-	{
-		switch(*(req_file + i))
-		{
-			case '.': dot = i + 1; break;
-			case '_': underscore = i + 1; break;
-		}
-	}
-
-	// Check for invalid filenames
-	if(dot == -1 || underscore == -1 || dot <= underscore || underscore == dot - 1)
-		http_error_c(404);
-
 	// Convert size to an integer
-	char* size_str = calloc(dot - underscore, sizeof(char));
-	if(size_str == NULL)
-	{
-		syslog(LOG_ERR, "Could not allocate.\n");
-		http_error_c(500);
-	}
-
-	memcpy(size_str, req_file + underscore, dot - underscore - 1);
 	size_t size = atoi(size_str);
-	free(size_str);
 
 	if(size <= 0)
 		http_error_c(404);
 
-	// Get source picture
-	char* source = calloc(strlen(req_file), sizeof(char));
-	if(source == NULL)
-	{
-		syslog(LOG_ERR, "Could not allocate.\n");
-		http_error_c(500);
-	}
-
-	memcpy(source, req_file, underscore - 1);
-	strcpy(source + underscore - 1, req_file + dot - 1);
-
-	char* path = calloc(strlen(root) +  strlen(source) + 1, sizeof(char));
-	sprintf(path, "%s%s", root, source);
+	// Get source path
+	char* path = calloc(strlen(root) +  strlen(basename) + strlen(extension) + 2, sizeof(char));
+	sprintf(path, "%s%s.%s", root, basename, extension);
 
 	// Read the image, resize it and write it
 	int resize_status = resize_image(path, req_path, size);
 
 	if(resize_status == 1)
 	{
-		FCGX_FPrintF(request->out, "Location: %s%s\r\n\r\n", http_uri, source);
+		FCGX_FPrintF(request->out, "Location: ../%s.%s\r\n\r\n", basename, extension);
 		return;
 	} else if(resize_status < 0)
 	{
-		free(source);
 		free(path);
 		free(req_path);
 		http_error_c(404);
 	}
 
 	http_sendfile(req_file, "image/png");
-	syslog(LOG_INFO, "[200] %s - Generated from %s.\n", req_file, source);
+	syslog(LOG_INFO, "[200] %s - Generated from %s.%s.\n", req_file, basename, extension);
 
-	free(source);
 	free(path);
 	free(req_path);
 }
