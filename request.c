@@ -34,13 +34,13 @@ void handle_request(FCGX_Request* request, char* root)
 	char* extension = FCGX_GetParam("EXTENSION", request->envp);
 	char* size_str = FCGX_GetParam("SIZE", request->envp);
 	char* mode = FCGX_GetParam("MODE", request->envp);
+	char* req_file = FCGX_GetParam("FILENAME", request->envp);
 
-	if(!size_str || !basename || !extension)
+	if(!size_str || !basename || !extension || !req_file)
 		http_error_c(500);
 
-	// Build filename
-	char* req_file = calloc(strlen(basename) + strlen(size_str) + strlen(extension) + 3, sizeof(char));
-	sprintf(req_file, "%s_%s.%s", basename, size_str, extension);
+	if(!mode)
+		mode = "default";
 
 	// Build absolute file path
 	char* req_path = calloc(strlen(root) +  strlen(req_file) + 1, sizeof(char));
