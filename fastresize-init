@@ -16,7 +16,7 @@ SERVICE_NAME=fastresize
 USER=app
 GROUP=app
 PIDFILE=/var/run/fastresize.pid
-DAEMON_OPTS="/var/www/asset/ 127.0.0.1:9000 1000 1000 9"
+DAEMON_OPTS="/var/www/asset/ 127.0.0.1:9000 nginx nginx 1000 9"
 
 if [ ! -x $DAEMON ]; then
   echo "ERROR: Can't execute $DAEMON."

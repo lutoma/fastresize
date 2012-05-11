@@ -29,6 +29,8 @@
 #include <fcgiapp.h>
 #include <sys/stat.h>
 #include <syslog.h>
+#include <pwd.h>
+#include <grp.h>
 #include <wand/MagickWand.h>
 
 #include "global.h"
@@ -36,7 +38,7 @@
 
 void usage(char* argv[])
 {
-	fprintf(stderr, "Usage: %s [root] [listen_addr] [group] [user] [num_workers]\n", argv[0]);
+	fprintf(stderr, "Usage: %s [root] [listen_addr] [user] [group] [num_workers]\n", argv[0]);
 	syslog(LOG_ERR, "Invalid command line arguments\n");
 	exit(EXIT_FAILURE);
 }
@@ -48,12 +50,21 @@ int main(int argc, char* argv[], char* envp[])
 
 	char* root = argv[1];
 	char* listen_addr = argv[2];
-	int groupid = atoi(argv[3]);
-	int userid = atoi(argv[4]);
 	int num_workers = atoi(argv[5]);
 
-	if(groupid <= 0 || userid <= 0 || num_workers <= 0)
+	if(num_workers < 1)
 		usage(argv);
+
+	struct passwd* pwd = getpwnam(argv[3]);
+	if (pwd == NULL)
+			error_errno("getpwnam_r failed", EXIT_FAILURE);
+
+	struct group* grp = getgrnam(argv[4]);
+	if (grp == NULL)
+			error_errno("getgrnam_r failed", EXIT_FAILURE);
+
+	int userid = pwd->pw_uid;
+	int groupid = grp->gr_gid;
 
 	if(root[strlen(root) - 1] != '/')
 		error("Did you forget the ending slash in the root directory path?", EXIT_FAILURE);
