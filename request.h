@@ -19,6 +19,6 @@
 
 #define http_error(num) { FCGX_FPrintF(request->out, "\r\n\r\nError %d\n", num); }
 #define http_error_c(num) { http_error(num); return; }
-#define http_sendfile(file, mime) { FCGX_FPrintF(request->out, "Content-type: %s\r\nX-Accel-Redirect: /asset-send/%s\r\nX-Generator: fastresize\r\n\r\n", mime, file); }
+#define http_sendfile(file) { FCGX_FPrintF(request->out, "X-Accel-Redirect: /asset-send/%s\r\nGenerator: fastresize\r\n\r\n", file); }
 
 void handle_request(FCGX_Request* request, char* root);

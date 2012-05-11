@@ -52,7 +52,7 @@ void handle_request(FCGX_Request* request, char* root)
 	{
 		if(check_stat.st_mode & S_IFREG)
 		{
-			http_sendfile(req_file, "image/png");
+			http_sendfile(req_file);
 			syslog(LOG_INFO, "[200] %s - Already exists in file system\n", req_file);
 			return;
 		} else {
@@ -87,7 +87,7 @@ void handle_request(FCGX_Request* request, char* root)
 		http_error_c(404);
 	}
 
-	http_sendfile(req_file, "image/png");
+	http_sendfile(req_file);
 	syslog(LOG_INFO, "[200] %s - Generated from %s.%s.\n", req_file, basename, extension);
 
 	free(path);
