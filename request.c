@@ -33,7 +33,8 @@ void handle_request(FCGX_Request* request, char* root)
 	char* basename = FCGX_GetParam("BASENAME", request->envp);
 	char* extension = FCGX_GetParam("EXTENSION", request->envp);
 	char* size_str = FCGX_GetParam("SIZE", request->envp);
-	
+	char* mode = FCGX_GetParam("MODE", request->envp);
+
 	if(!size_str || !basename || !extension)
 		http_error_c(500);
 
@@ -71,7 +72,7 @@ void handle_request(FCGX_Request* request, char* root)
 	sprintf(path, "%s%s.%s", root, basename, extension);
 
 	// Read the image, resize it and write it
-	int resize_status = resize_image(path, req_path, size);
+	int resize_status = resize_image(path, req_path, size, mode);
 
 	if(resize_status == 1)
 	{

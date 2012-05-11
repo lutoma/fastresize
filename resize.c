@@ -18,12 +18,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <syslog.h>
+#include <string.h>
 #include <wand/MagickWand.h>
 
 #include "global.h"
 #include "resize.h"
 
-int resize_image(char* path, char* req_path, size_t size)
+int resize_image(char* path, char* req_path, size_t size, char* mode)
 {
 	// Create new image
 	MagickWand* magick_wand = NewMagickWand();
@@ -45,10 +46,8 @@ int resize_image(char* path, char* req_path, size_t size)
 	size_t new_height = size;
 	size_t new_width = size;
 
-	bool square = false; // FIXME
-
 	// Unless a square image is requested, calculcate proper aspect ratio
-	if(!square && size != 1)
+	if(size != 1 && strcmp(mode, "square"))
 	{
 		if(width >= height)
 			new_height = height * size / width;

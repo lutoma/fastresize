@@ -15,4 +15,4 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-int resize_image(char* path, char* req_path, size_t size);
+int resize_image(char* path, char* req_path, size_t size, char* mode);
