@@ -57,7 +57,7 @@ int resize_image(char* path, char* req_path, size_t size, char* mode)
 	 */
 	MagickResetIterator(magick_wand);
 	for(int i = 0; MagickNextImage(magick_wand) != false && i < 250; i++)
-		MagickResizeImage(magick_wand, new_width, new_height, !i ? LanczosFilter : BoxFilter, 1);
+		MagickResizeImage(magick_wand, new_width, new_height, !i ? LanczosFilter : TriangleFilter, 1);
 
 	// Write the image
 	status = MagickWriteImages(magick_wand, req_path, true);
