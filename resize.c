@@ -52,10 +52,12 @@ int resize_image(char* path, char* req_path, size_t size, char* mode)
 		new_height = height * size / width;
 	}
 
-	// Turn the image into a thumbnail sequence (for animated GIFs)
+	/* Turn the image into a thumbnail sequence (for animated GIFs)
+	 * Automatically switches to a less cpu intense filter for animated GIFs.
+	 */
 	MagickResetIterator(magick_wand);
-	while (MagickNextImage(magick_wand) != false)
-		MagickResizeImage(magick_wand, new_width, new_height, LanczosFilter, 1);
+	for(int i = 0; MagickNextImage(magick_wand) != false && i < 250; i++)
+		MagickResizeImage(magick_wand, new_width, new_height, !i ? LanczosFilter : BoxFilter, 1);
 
 	// Write the image
 	status = MagickWriteImages(magick_wand, req_path, true);
