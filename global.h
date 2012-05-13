@@ -19,5 +19,6 @@
 
 #define error(desc, ret) do { syslog(LOG_ERR, "Error: %s\n",  desc); exit(ret); } while(0);
 #define error_errno(desc, ret) do { syslog(LOG_ERR, "Error: %s (%s)\n",  desc, strerror(errno)); exit(ret); } while(0);
+#define log_request(status, level, text, args...) { syslog(level, "%d - #%d - %s - " text "\n", status, worker_id, req_file ? req_file : "unknown", ## args); }
 
 extern int worker_id;

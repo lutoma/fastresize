@@ -89,7 +89,7 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 
 	if(!size_str || !basename || !extension || !req_file)
 	{
-		syslog(LOG_CRIT, "[500] %s - Invalid FastCGI parameters from server!\n", req_file ? req_file : "");
+		log_request(500, LOG_CRIT, "Invalid FastCGI parameters from server!");
 		http_error_c(500);
 	}
 
@@ -100,7 +100,7 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 	char* req_path = calloc(strlen(thumbnail_root) +  strlen(req_file) + 1, sizeof(char));
 	if(!req_path)
 	{
-		syslog(LOG_EMERG, "[500] %s - Allocation failure for req_path!\n", req_file);
+		log_request(500, LOG_EMERG, "Allocation failure for req_path!");
 		http_error_c(500);
 	}
 
@@ -114,11 +114,11 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 		if(check_stat.st_mode & S_IFREG)
 		{
 			http_sendfile(req_file);
-			syslog(LOG_INFO, "[200] %s - Already exists in file system\n", req_file);
+			log_request(200, LOG_INFO, "Already exists in file system");
 			return;
 		} else {
 			// Directory, pipe, symlink or similar.
-			syslog(LOG_WARNING, "[403] %s - Request for existing file of wrong type (directory, symlink, ...)\n", req_file);
+			log_request(403, LOG_WARNING, "Request for existing file of wrong type (directory, symlink, ...)");
 			http_error_c(403);
 		}
 	}
@@ -127,7 +127,7 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 	char* dir_req_path = calloc(strlen(req_path) + 1, sizeof(char));
 	if(!req_path)
 	{
-		syslog(LOG_EMERG, "[500] %s - Allocation failure for dir_req_path!\n", req_file);
+		log_request(500, LOG_EMERG, "Allocation failure for dir_req_path!");
 		free(req_path);
 		http_error_c(500);
 	}
@@ -147,7 +147,7 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 	if(stat(dir_req_path, &check_stat) != 0 && errno == ENOENT)
 		if(mkpath(dir_req_path, S_IREAD | S_IWRITE | S_IEXEC | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0)
 		{
-			syslog(LOG_ERR, "[500] %s - Couldn't mkpath() %s\n", req_path, dir_req_path);
+			log_request(500, LOG_ERR, "Couldn't mkpath() %s\n", dir_req_path);
 			free(req_path);
 			free(dir_req_path);
 			http_error_c(500);
@@ -168,7 +168,7 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 	char* path = calloc(strlen(root) +  strlen(basename) + strlen(extension) + 2, sizeof(char));
 	if(!req_path)
 	{
-		syslog(LOG_EMERG, "[500] %s - Allocation failure for path!\n", req_file);
+		log_request(500, LOG_EMERG, "Allocation failure for path!");
 		free(req_path);
 		http_error_c(500);
 	}
@@ -183,18 +183,18 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 		FCGX_FPrintF(request->out, "Location: ../%s.%s\r\n\r\n", basename, extension);
 		free(path);
 		free(req_path);
-		syslog(LOG_INFO, "[203] %s - Requested image size bigger than original - redirecting\n", req_file);
+		log_request(203, LOG_INFO, "Requested image size bigger than original - redirecting");
 		return;
 	} else if(resize_status < 0)
 	{
 		free(path);
 		free(req_path);
-		syslog(LOG_WARNING, "[404] %s - File not found\n", req_file);
+		log_request(404, LOG_WARNING, "File not found");
 		http_error_c(404);
 	}
 
 	http_sendfile(req_file);
-	syslog(LOG_INFO, "[200] %s - Generated from %s.%s.\n", req_file, basename, extension);
+	log_request(200, LOG_INFO, "Generated from %s.%s", basename, extension);
 
 	free(path);
 	free(req_path);
