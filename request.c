@@ -28,7 +28,7 @@
 #include "request.h"
 #include "resize.h"
 
-void handle_request(FCGX_Request* request, char* root)
+void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 {
 	char* basename = FCGX_GetParam("BASENAME", request->envp);
 	char* extension = FCGX_GetParam("EXTENSION", request->envp);
@@ -43,7 +43,7 @@ void handle_request(FCGX_Request* request, char* root)
 		mode = "default";
 
 	// Build absolute file path
-	char* req_path = calloc(strlen(root) +  strlen(req_file) + 1, sizeof(char));
+	char* req_path = calloc(strlen(thumbnail_root) +  strlen(req_file) + 1, sizeof(char));
 	sprintf(req_path, "%s%s", root, req_file);
 
 	// Check if the requested file exists already

@@ -38,36 +38,37 @@
 
 void usage(char* argv[])
 {
-	fprintf(stderr, "Usage: %s [root] [listen_addr] [user] [group] [num_workers]\n", argv[0]);
+	fprintf(stderr, "Usage: %s [root] [thumbnail_root] [listen_addr] [user] [group] [num_workers]\n", argv[0]);
 	syslog(LOG_ERR, "Invalid command line arguments\n");
 	exit(EXIT_FAILURE);
 }
 
 int main(int argc, char* argv[], char* envp[])
 {
-	if(argc < 6)
+	if(argc < 7)
 		usage(argv);
 
 	char* root = argv[1];
-	char* listen_addr = argv[2];
-	int num_workers = atoi(argv[5]);
+	char* thumbnail_root = argv[2];
+	char* listen_addr = argv[3];
+	int num_workers = atoi(argv[6]);
 
 	if(num_workers < 1)
 		usage(argv);
 
-	struct passwd* pwd = getpwnam(argv[3]);
+	struct passwd* pwd = getpwnam(argv[4]);
 	if (pwd == NULL)
 			error_errno("getpwnam_r failed", EXIT_FAILURE);
 
-	struct group* grp = getgrnam(argv[4]);
+	struct group* grp = getgrnam(argv[5]);
 	if (grp == NULL)
 			error_errno("getgrnam_r failed", EXIT_FAILURE);
 
 	int userid = pwd->pw_uid;
 	int groupid = grp->gr_gid;
 
-	if(root[strlen(root) - 1] != '/')
-		error("Did you forget the ending slash in the root directory path?", EXIT_FAILURE);
+	if(root[strlen(root) - 1] != '/' || thumbnail_root[strlen(thumbnail_root) - 1] != '/')
+		error("Did you forget the ending slash in the (thumbnail) root directory path?", EXIT_FAILURE);
 
 	// TODO Some more error checking
 
@@ -133,7 +134,7 @@ int main(int argc, char* argv[], char* envp[])
 	}
 
 	while(FCGX_Accept_r(&request) == 0)
-		handle_request(&request, root);
+		handle_request(&request, root, thumbnail_root);
 
 	// Cleanup & exit
 	MagickWandTerminus();

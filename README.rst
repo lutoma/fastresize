@@ -28,10 +28,13 @@ Launching fastresize
 
 The syntax to launch fastresize is
 
-	fastresize [root] [listen_addr] [user] [group] [num_workers]
+	fastresize [root] [thumbnail_root] [listen_addr] [user] [group] [num_workers]
 
 root
   The directory assets should be served from. Don't forget the trailing slash.
+
+thumbnail_root
+  The directory thumbnails should be saved at. Don't forget the trailing slash.
 
 listen_addr
   The socket address to listen on, for example 127.0.0.1:9000

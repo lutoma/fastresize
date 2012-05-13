@@ -30,4 +30,4 @@ static inline void http_error(FCGX_Request* request, int num) {
 #define http_error_c(num) { http_error(request, num); return; }
 #define http_sendfile(file) { FCGX_FPrintF(request->out, "X-Accel-Redirect: /asset-send/%s\r\n\r\n", file); }
 
-void handle_request(FCGX_Request* request, char* root);
+void handle_request(FCGX_Request* request, char* root, char* thumbnail_root);
