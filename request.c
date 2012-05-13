@@ -23,10 +23,61 @@
 #include <fcgiapp.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <errno.h>
+#include <assert.h>
 
 #include "global.h"
 #include "request.h"
 #include "resize.h"
+
+static int do_mkdir(const char *path, mode_t mode)
+{
+	struct stat st;
+	int status = 0;
+
+	if (stat(path, &st) != 0)
+	{
+		/* Directory does not exist */
+		if (mkdir(path, mode) != 0)
+			status = -1;
+	}
+	else if (!S_ISDIR(st.st_mode))
+	{
+		errno = ENOTDIR;
+		status = -1;
+	}
+
+	return status;
+}
+
+
+int mkpath(const char *path, mode_t mode)
+{
+	char* pp;
+	char* sp;
+	int status;
+	char* copypath = strdup(path);
+
+	status = 0;
+	pp = copypath;
+	while (status == 0 && (sp = strchr(pp, '/')) != 0)
+	{
+		if (sp != pp)
+		{
+			// Neither root nor double slash in path
+			*sp = 0;
+			status = do_mkdir(copypath, mode);
+			*sp = '/';
+		}
+		pp = sp + 1;
+	}
+
+	if(status == 0)
+		status = do_mkdir(path, mode);
+
+	free(copypath);
+	return status;
+}
 
 void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 {
@@ -44,7 +95,7 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 
 	// Build absolute file path
 	char* req_path = calloc(strlen(thumbnail_root) +  strlen(req_file) + 1, sizeof(char));
-	sprintf(req_path, "%s%s", root, req_file);
+	sprintf(req_path, "%s%s", thumbnail_root, req_file);
 
 	// Check if the requested file exists already
 	struct stat check_stat;
@@ -60,6 +111,29 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 			http_error_c(403);
 		}
 	}
+
+	// Get directory path
+	char* dir_req_path = calloc(strlen(req_path) + 1, sizeof(char));
+	strcpy(dir_req_path, req_path);
+
+	for(int i = strlen(dir_req_path) - 1; i > 0; i--)
+	{
+		if(*(dir_req_path + i) == '/')
+		{
+			*(dir_req_path + i + 1) = 0;
+			break;
+		}
+	}
+
+	// Create thumbnail directory if neccessary
+	if(stat(dir_req_path, &check_stat) != 0 && errno == ENOENT)
+		if(mkpath(dir_req_path, S_IREAD | S_IWRITE | S_IEXEC | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0)
+		{
+			syslog(LOG_INFO, "Couldn't mkpath() %s\n", dir_req_path);
+			http_error_c(500);
+		}
+
+	free(dir_req_path);
 
 	// Convert size to an integer
 	size_t size = atoi(size_str);
