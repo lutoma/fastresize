@@ -107,6 +107,7 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 	struct stat check_stat;
 	if(stat(req_path, &check_stat) == 0)
 	{
+		free(req_path);
 		if(check_stat.st_mode & S_IFREG)
 		{
 			http_sendfile(req_file);
@@ -114,7 +115,6 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 			return;
 		} else {
 			// Directory, pipe, symlink or similar.
-			free(req_path);
 			http_error_c(403);
 		}
 	}
