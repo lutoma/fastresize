@@ -40,7 +40,7 @@ int resize_image(char* path, char* req_path, size_t size, char* mode)
 	size_t height = MagickGetImageHeight(magick_wand);
 
 	// If the size is bigger than both height and width, redirect to original
-	if(size >= width && size >= height)
+	if(size >= width)
 		return 1;
 
 	size_t new_height = size;
@@ -49,10 +49,7 @@ int resize_image(char* path, char* req_path, size_t size, char* mode)
 	// Unless a square image is requested, calculcate proper aspect ratio
 	if(size != 1 && strcmp(mode, "square"))
 	{
-		if(width >= height)
-			new_height = height * size / width;
-		else
-			new_width = width * size / height;
+		new_height = height * size / width;
 	}
 
 	// Turn the image into a thumbnail sequence (for animated GIFs)
