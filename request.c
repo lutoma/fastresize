@@ -154,10 +154,20 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 	size_t size = atoi(size_str);
 
 	if(size <= 0)
+	{
+		free(req_path);
 		http_error_c(404);
+	}
 
 	// Get source path
 	char* path = calloc(strlen(root) +  strlen(basename) + strlen(extension) + 2, sizeof(char));
+	if(!req_path)
+	{
+		syslog(LOG_ERR, "Allocation failure for path!\n");
+		free(req_path);
+		http_error_c(500);
+	}
+
 	sprintf(path, "%s%s.%s", root, basename, extension);
 
 	// Read the image, resize it and write it
