@@ -143,6 +143,8 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 		if(mkpath(dir_req_path, S_IREAD | S_IWRITE | S_IEXEC | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0)
 		{
 			syslog(LOG_INFO, "Couldn't mkpath() %s\n", dir_req_path);
+			free(req_path);
+			free(dir_req_path);
 			http_error_c(500);
 		}
 
