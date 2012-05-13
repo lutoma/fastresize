@@ -95,6 +95,12 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 
 	// Build absolute file path
 	char* req_path = calloc(strlen(thumbnail_root) +  strlen(req_file) + 1, sizeof(char));
+	if(!req_path)
+	{
+		syslog(LOG_ERR, "Allocation failure for req_path!\n");
+		http_error_c(500);
+	}
+
 	sprintf(req_path, "%s%s", thumbnail_root, req_file);
 
 	// Check if the requested file exists already
@@ -114,6 +120,13 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 
 	// Get directory path
 	char* dir_req_path = calloc(strlen(req_path) + 1, sizeof(char));
+	if(!req_path)
+	{
+		syslog(LOG_ERR, "Allocation failure for dir_req_path!\n");
+		free(req_path);
+		http_error_c(500);
+	}
+
 	strcpy(dir_req_path, req_path);
 
 	for(int i = strlen(dir_req_path) - 1; i > 0; i--)
