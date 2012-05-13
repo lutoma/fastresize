@@ -36,6 +36,8 @@
 #include "global.h"
 #include "request.h"
 
+int worker_id = -1;
+
 void usage(char* argv[])
 {
 	fprintf(stderr, "Usage: %s [root] [thumbnail_root] [listen_addr] [user] [group] [num_workers]\n", argv[0]);
@@ -113,13 +115,14 @@ int main(int argc, char* argv[], char* envp[])
 
 	// Fork worker processes and exit main process (to daemonize)
 	bool worker = false;
+	int i;
 	syslog(LOG_INFO, "Forking workers\n");
-	for(int i = 1; i <= num_workers; i++)
+	for(i = 1; i <= num_workers; i++)
 		if((worker = fork() == 0)) break;
 	
 	if(!worker)
 	{
-		syslog(LOG_INFO, "Now listening for requests on 127.0.0.1:9000\n");
+		syslog(LOG_INFO, "Exiting main thread\n");
 		printf("Successfull startup, see syslog for details\n");
 
 		// Change the filemode mask
@@ -132,6 +135,9 @@ int main(int argc, char* argv[], char* envp[])
 
 		exit(EXIT_SUCCESS);
 	}
+
+	worker_id = i;
+	syslog(LOG_INFO, "Worker #%d is now listening for requests on 127.0.0.1:9000\n", worker_id);
 
 	while(FCGX_Accept_r(&request) == 0)
 		handle_request(&request, root, thumbnail_root);

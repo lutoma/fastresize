@@ -15,5 +15,9 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
 #define error(desc, ret) do { syslog(LOG_ERR, "Error: %s\n",  desc); exit(ret); } while(0);
 #define error_errno(desc, ret) do { syslog(LOG_ERR, "Error: %s (%s)\n",  desc, strerror(errno)); exit(ret); } while(0);
+
+extern int worker_id;
