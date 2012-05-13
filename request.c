@@ -114,6 +114,7 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 			return;
 		} else {
 			// Directory, pipe, symlink or similar.
+			free(req_path);
 			http_error_c(403);
 		}
 	}
