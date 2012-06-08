@@ -31,6 +31,7 @@
 #include <syslog.h>
 #include <pwd.h>
 #include <grp.h>
+#include <signal.h>
 #include <wand/MagickWand.h>
 
 #include "global.h"
@@ -112,27 +113,35 @@ int main(int argc, char* argv[], char* envp[])
 	// Initialize ImageMagick
 	syslog(LOG_INFO, "Initializing ImageMagick\n");
 	MagickWandGenesis();
+	atexit(MagickWandTerminus);
 
-	// Fork worker processes and exit main process (to daemonize)
+	/* Fork a new master process to daemonize and exit the old one. We use
+	 * _Exit here to not trigger the atexit that terminates ImageMagick.
+	 */
+	if(fork())
+		_Exit(EXIT_SUCCESS);
+
+	// Fork worker processes
 	bool worker = false;
 	int i;
 	syslog(LOG_INFO, "Forking workers\n");
 	for(i = 1; i <= num_workers; i++)
 		if((worker = fork() == 0)) break;
 	
+	// The following code is only executed in the master process.
 	if(!worker)
 	{
-		syslog(LOG_INFO, "Exiting main thread\n");
 		printf("Successfull startup, see syslog for details\n");
 
-		// Change the filemode mask
-		umask(0);
+		// Sleep a little until we get a SIG{TERM,HUP,INT}.
+		sigset_t mask;
+		sigfillset(&mask);
+		sigdelset(&mask, SIGTERM);
+		sigdelset(&mask, SIGINT);
+		sigdelset(&mask, SIGHUP);
+		sigsuspend(&mask);
 
-		// Close stdin, -out, -err
-		close(STDIN_FILENO);
-		close(STDOUT_FILENO);
-		close(STDERR_FILENO);
-
+		syslog(LOG_INFO, "Catched signal!\n");
 		exit(EXIT_SUCCESS);
 	}
 
@@ -142,7 +151,6 @@ int main(int argc, char* argv[], char* envp[])
 	while(FCGX_Accept_r(&request) == 0)
 		handle_request(&request, root, thumbnail_root);
 
-	// Cleanup & exit
-	MagickWandTerminus();
+	// Exit
 	exit(EXIT_SUCCESS);
 }
