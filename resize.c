@@ -48,9 +48,7 @@ int resize_image(char* path, char* req_path, size_t size, char* mode)
 
 	// Unless a square image is requested, calculcate proper aspect ratio
 	if(size != 1 && strcmp(mode, "square"))
-	{
 		new_height = height * size / width;
-	}
 
 	/* Turn the image into a thumbnail sequence (for animated GIFs)
 	 * Automatically switches to a less cpu intense filter for animated GIFs.

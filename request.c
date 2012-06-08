@@ -133,15 +133,8 @@ void handle_request(FCGX_Request* request, char* root, char* thumbnail_root)
 	}
 
 	strcpy(dir_req_path, req_path);
-
-	for(int i = strlen(dir_req_path) - 1; i > 0; i--)
-	{
-		if(*(dir_req_path + i) == '/')
-		{
-			*(dir_req_path + i + 1) = 0;
-			break;
-		}
-	}
+	char* p = strrchr(dir_req_path, (int)'/');
+	if(p != NULL) *++p = 0;
 
 	// Create thumbnail directory if neccessary
 	if(stat(dir_req_path, &check_stat) != 0 && errno == ENOENT)
