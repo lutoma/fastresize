@@ -38,12 +38,27 @@
 #include "request.h"
 
 int worker_id = -1;
+pid_t* worker_pids = NULL;
+int num_workers = -1;
 
 void usage(char* argv[])
 {
 	fprintf(stderr, "Usage: %s [root] [thumbnail_root] [listen_addr] [user] [group] [num_workers]\n", argv[0]);
 	syslog(LOG_ERR, "Invalid command line arguments\n");
 	exit(EXIT_FAILURE);
+}
+
+void shutdown()
+{
+	syslog(LOG_INFO, "Catched one of SIG{TERM,INT, HUP}, killing workers!\n");
+	for(int i = 0; i <= num_workers; i++)
+		kill(worker_pids[i], SIGTERM);
+	exit(EXIT_SUCCESS);
+}
+
+void worker_died()
+{
+	syslog(LOG_CRIT, "One of our workers crashed. This is seriously BAD.\n");
 }
 
 int main(int argc, char* argv[], char* envp[])
@@ -54,7 +69,7 @@ int main(int argc, char* argv[], char* envp[])
 	char* root = argv[1];
 	char* thumbnail_root = argv[2];
 	char* listen_addr = argv[3];
-	int num_workers = atoi(argv[6]);
+	num_workers = atoi(argv[6]);
 
 	if(num_workers < 1)
 		usage(argv);
@@ -101,9 +116,9 @@ int main(int argc, char* argv[], char* envp[])
 	// Now that we've got our socket, drop root privileges
 	if (getuid() == 0) {
 		if (setgid(groupid) != 0)
-			error_errno("setgid: Unable to drop group privileges", 1);
+			error_errno("setgid: Unable to drop group privileges", EXIT_FAILURE);
 		if (setuid(userid) != 0)
-			error_errno("setuid: Unable to drop user privileges", 1);
+			error_errno("setuid: Unable to drop user privileges", EXIT_FAILURE);
 	}
 
 	FCGX_Request request;
@@ -125,8 +140,10 @@ int main(int argc, char* argv[], char* envp[])
 	syslog(LOG_INFO, "Forking workers\n");
 
 	// Fork worker processes
-	pid_t* worker_pids = calloc(num_workers, sizeof(pid_t));
-	int worker_id;
+	worker_pids = calloc(num_workers, sizeof(pid_t));
+	if(!worker_pids)
+		error_errno("worker_pids: Could not allocate", 1);
+	
 	for(worker_id = 0; worker_id <= num_workers; worker_id++)
 	{
 		worker_pids[worker_id] = fork();
@@ -143,17 +160,27 @@ int main(int argc, char* argv[], char* envp[])
 	{
 		printf("Successfull startup, see syslog for details\n");
 
-		// Sleep a little until we get a SIG{TERM,HUP,INT}.
-		sigset_t mask;
-		sigfillset(&mask);
-		sigdelset(&mask, SIGTERM);
-		sigdelset(&mask, SIGINT);
-		sigdelset(&mask, SIGHUP);
-		sigsuspend(&mask);
+		syslog(LOG_INFO, "master (PID %d): Sleeping until I receive a signal.\n", getpid());
 
-		syslog(LOG_INFO, "Catched one of SIG{TERM,INT, HUP}, killing workers!\n");
+		/* Sleep a little until we get a SIG{TERM,HUP,INT} or one of our
+		 * workers died (not cool).
+		 */
+		struct sigaction exit_action;
+		exit_action.sa_handler = &shutdown;
+		exit_action.sa_sigaction = &shutdown;
 
-		exit(EXIT_SUCCESS);
+		struct sigaction worker_died_action;
+		worker_died_action.sa_handler = &worker_died;
+		worker_died_action.sa_sigaction = &worker_died;
+
+		sigaction(SIGTERM, &exit_action, NULL);
+		sigaction(SIGHUP, &exit_action, NULL);
+		sigaction(SIGINT, &exit_action, NULL);
+		sigaction(SIGCHLD, &worker_died_action, NULL);
+		pause();
+
+		// This should never™ be reached unless something funny happens.
+		exit(EXIT_FAILURE);
 	}
 
 	syslog(LOG_INFO, "Worker #%d is now listening for requests on 127.0.0.1:9000\n", worker_id);
