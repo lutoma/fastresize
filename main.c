@@ -48,7 +48,7 @@ void usage(char* argv[])
 	exit(EXIT_FAILURE);
 }
 
-void shutdown()
+void exit_signal()
 {
 	syslog(LOG_INFO, "Catched one of SIG{TERM,INT, HUP}, killing workers!\n");
 	for(int i = 0; i <= num_workers; i++)
@@ -163,8 +163,8 @@ int main(int argc, char* argv[], char* envp[])
 		 * workers died (not cool).
 		 */
 		struct sigaction exit_action;
-		exit_action.sa_handler = &shutdown;
-		exit_action.sa_sigaction = &shutdown;
+		exit_action.sa_handler = &exit_signal;
+		exit_action.sa_sigaction = &exit_signal;
 
 		struct sigaction worker_died_action;
 		worker_died_action.sa_handler = &worker_died;
