@@ -130,9 +130,15 @@ int main(int argc, char* argv[], char* envp[])
 	MagickWandGenesis();
 	atexit(MagickWandTerminus);
 
+	/* Fork a new master process to daemonize and exit the old one. We use
+	 * _Exit here to not trigger the atexit that terminates ImageMagick.
+	 */
+	if(fork())
+		_Exit(EXIT_SUCCESS);
+
 	// Fork worker processes
 	syslog(LOG_INFO, "Forking workers\n");
-	
+
 	worker_pids = calloc(num_workers, sizeof(pid_t));
 	if(!worker_pids)
 		error_errno("worker_pids: Could not allocate", 1);
@@ -151,14 +157,6 @@ int main(int argc, char* argv[], char* envp[])
 	// The following code is only executed in the master process.
 	if(worker_id > num_workers)
 	{
-		printf("Successfull startup, see syslog for details\n");
-
-		/* Fork a new master process to daemonize and exit the old one. We use
-		 * _Exit here to not trigger the atexit that terminates ImageMagick.
-		 */
-		if(fork())
-			_Exit(EXIT_SUCCESS);
-
 		syslog(LOG_INFO, "master (PID %d): Sleeping until I receive a signal.\n", getpid());
 
 		/* Sleep a little until we get a SIG{TERM,HUP,INT} or one of our
