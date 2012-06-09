@@ -121,15 +121,25 @@ int main(int argc, char* argv[], char* envp[])
 	if(fork())
 		_Exit(EXIT_SUCCESS);
 
-	// Fork worker processes
-	bool worker = false;
-	int i;
+
 	syslog(LOG_INFO, "Forking workers\n");
-	for(i = 1; i <= num_workers; i++)
-		if((worker = fork() == 0)) break;
-	
+
+	// Fork worker processes
+	pid_t* worker_pids = calloc(num_workers, sizeof(pid_t));
+	int worker_id;
+	for(worker_id = 0; worker_id <= num_workers; worker_id++)
+	{
+		worker_pids[worker_id] = fork();
+
+		// Exit the loop if we're the forked process
+		if(worker_pids[worker_id] == 0)
+			break;
+
+		syslog(LOG_INFO, "Forked worker with PID %d\n", worker_pids[worker_id]);
+	}
+
 	// The following code is only executed in the master process.
-	if(!worker)
+	if(worker_id > num_workers)
 	{
 		printf("Successfull startup, see syslog for details\n");
 
@@ -141,11 +151,11 @@ int main(int argc, char* argv[], char* envp[])
 		sigdelset(&mask, SIGHUP);
 		sigsuspend(&mask);
 
-		syslog(LOG_INFO, "Catched signal!\n");
+		syslog(LOG_INFO, "Catched one of SIG{TERM,INT, HUP}, killing workers!\n");
+
 		exit(EXIT_SUCCESS);
 	}
 
-	worker_id = i;
 	syslog(LOG_INFO, "Worker #%d is now listening for requests on 127.0.0.1:9000\n", worker_id);
 
 	while(FCGX_Accept_r(&request) == 0)
